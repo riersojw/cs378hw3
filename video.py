@@ -19,9 +19,9 @@ while (cap.isOpened()):
         bframe = cv2.GaussianBlur(frame, (7, 7), 1)
 	fgray = cv2.cvtColor(bframe, cv2.COLOR_BGR2GRAY)
 
-        lblue = np.array([38, 86, 0])
-        ublue = np.array([121, 255, 255])
-        mask = cv2.inRange(hsv, lblue, ublue)
+        lred = np.array([105, 150, 50])
+        ured = np.array([125, 255, 255])
+        mask = cv2.inRange(hsv, lred, ured)
 
         threshold1 = cv2.getTrackbarPos("Threshold1", "Parameters")
         threshold2 = cv2.getTrackbarPos("Threshold2", "Parameters")
