@@ -74,9 +74,11 @@ void cv_color_tracking(const Mat& input_img, ros::Publisher &controlPub)
     Mat1b mask1;
     Mat1b mask2;
     
+    //Uncommented to Track the Color Red
     cv::inRange(imgHSV, Scalar(105, 150, 50), Scalar(125, 255, 255), mask1); // red
     cv::Mat1b mask = mask1;
 
+     //commented out the next three lines to stop tracking Blue
     //cv::inRange(imgHSV, cv::Scalar(0, 70, 50), cv::Scalar(10, 255, 255), mask1);    //Blue
     //cv::inRange(imgHSV, cv::Scalar(170, 70, 50), cv::Scalar(180, 255, 255), mask2); // Blue
     //cv::Mat1b mask = mask1 | mask2;
@@ -99,23 +101,30 @@ void cv_color_tracking(const Mat& input_img, ros::Publisher &controlPub)
     std_msgs::Int16 msg;
     vector<Point> approx;
     
-    
+    //Vector to keep track of moment points
     vector<Moments> mu(contours.size());
+    //Vector to keep track of Bounding Rectangle points
     vector<Rect> boundRect(contours.size());
     size_t num_contours = contours.size();
+    /*two scalor functions to make it easier to include color. color = bounding rect
+      color2 = Text color*/ 
     Scalar color = Scalar(0,255,0);
+    Scalar color2 = Scalar(0,0,255);
 
     for (size_t i = 0; i < num_contours; i++) {
 	double area = contourArea(contours[i]);
+    //adding moment points to the vector based on the contour points
     mu[i] = moments( contours[i]);
     
 	//cout << "Area:" << area << endl;
 	if (area > limit) {
             cout << "Area: " << area << endl;
 	    detected = true;
-        
+        //Calculate the contour perimeter
         double peri = arcLength(contours[i], true);
+        // approximate a polygonal based on contour perimeter and contour point
         approxPolyDP(contours[i], approx, 0.02 * peri, true);
+        //Grab the bounding Rectangle points and dump them to the Bounding Rect Vector
         boundRect[i] = boundingRect( approx );
 
 	}
@@ -125,15 +134,32 @@ void cv_color_tracking(const Mat& input_img, ros::Publisher &controlPub)
     }else{
         detected_count = 0;
     }
-    
+    //calculate the center point of the detected area
     float cX = (mu[0].m10 / (mu[0].m00 + 1e-5));
     float cY = (mu[0].m01 / (mu[0].m00 + 1e-5));
+    
+   
     
     if (detected_count >= 2) {
         cout << "Detected" << std::endl;
         for ( int i = 0; i < contours.size(); i++){
+            //cout << "CX = " << cX << std::endl;
+            //cout << "CY = " << cY << std::endl;
+        //Draw the X in the center of the detected Area
         line(input_img, Point2f((cX - 10), (cY - 10)), Point2f((cX + 10), (cY + 10)), color, 2);
         line(input_img, Point2f((cX + 10), (cY - 10)), Point2f((cX - 10), (cY + 10)), color, 2);
+        /* Determine the location of the object in relation to the center x value of the frame
+           center value of our video feed is 640. If we are between the values of 600 and 680 we
+           assume that we are in front of the object. If we are 600 or less we are left of the object.
+           If we are 680 or greater than we are right of the object */
+        
+        if (cX <= 600){
+            putText(input_img, "Left", Point(900,715), FONT_HERSHEY_DUPLEX, 1, color2, 2);
+        } else if (cX >= 680) {
+            putText(input_img, "Right", Point(900,715), FONT_HERSHEY_DUPLEX, 1, color2, 2);
+        } else {
+            putText(input_img, "Front", Point(900,715), FONT_HERSHEY_DUPLEX, 1, color2, 2);
+        }
         rectangle( input_img, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
         }
         msg.data = 1;
@@ -149,7 +175,7 @@ void cv_color_tracking(const Mat& input_img, ros::Publisher &controlPub)
     
     
     cv::imshow("color_tracking_input_image", input_img);
-    cv::imshow("blue_tracking", mask); 
+    cv::imshow("RedCircle_Tracker", mask); 
     
     waitKey(1);
 }
